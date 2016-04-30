@@ -6,9 +6,10 @@ mixin template StateMachine(alias variable, states...)
     if((is(typeof(variable) : int) || is(typeof(variable) : string)) &&
        states.length > 0)
 {
+    import state_machine.util;
+
     import std.algorithm;
     import std.meta;
-    import std.string;
     import std.traits;
 
     private
@@ -22,6 +23,8 @@ mixin template StateMachine(alias variable, states...)
         {
             string state;
         }
+
+        typeof(variable) __prevState__;
     }
 
     @property
@@ -47,11 +50,21 @@ mixin template StateMachine(alias variable, states...)
         }
     }
 
+    typeof(variable) opDispatch(string op : "prev" ~ variable.stringof.toTitle)()
+    {
+        return __prevState__;
+    }
+
+    void opDispatch(string op : "revert" ~ variable.stringof.toTitle)()
+    {
+        variable = __prevState__;
+    }
+
     bool opDispatch(string state)()
         if(state.length > 2 && state[0 .. 2] == "to" &&
-           [ states ].map!capitalize.countUntil(state[2 .. $]) != -1)
+           [ states ].map!toTitle.countUntil(state[2 .. $]) != -1)
     {
-        enum index = [ states ].map!capitalize.countUntil(state[2 .. $]);
+        enum index = [ states ].map!toTitle.countUntil(state[2 .. $]);
 
         foreach(name; __traits(allMembers, typeof(this)))
         {
@@ -83,6 +96,9 @@ mixin template StateMachine(alias variable, states...)
                 }
             }
         }
+
+        // Save previous state.
+        __prevState__ = variable;
 
         // Update state variable.
         static if(is(typeof(variable) : int))
