@@ -3,8 +3,8 @@ module state_machine.base;
 
 /// State machine using an integer or string state variable.
 mixin template StateMachine(alias variable, states...)
-    if((is(typeof(variable) : int) || is(typeof(variable) : string)) &&
-       states.length > 0)
+    if(((is(typeof(variable) : int) || is(typeof(variable) : string)) && states.length > 0) ||
+      (is(typeof(variable) == enum) && states.length == 0))
 {
     import state_machine.util;
 
@@ -14,6 +14,16 @@ mixin template StateMachine(alias variable, states...)
 
     private
     {
+        static if(is(typeof(variable) == enum))
+        {
+            // States on enum types are derived from their members.
+            enum __states__ = __traits(allMembers, typeof(variable));
+        }
+        else
+        {
+            enum __states__ = states;
+        }
+
         struct BeforeTransition
         {
             string state;
@@ -30,18 +40,22 @@ mixin template StateMachine(alias variable, states...)
     @property
     static string[] opDispatch(string op : variable.stringof ~ "Names")()
     {
-        return [ states ];
+        return [ __states__ ];
     }
 
     @property
     bool opDispatch(string state)()
-        if([ states ].countUntil(state) != -1)
+        if([ __states__ ].countUntil(state) != -1)
     {
-        enum index = [ states ].countUntil(state);
-
         // Compare state variable.
-        static if(is(typeof(variable) : int))
+        static if(is(typeof(variable) == enum))
         {
+            return variable == __traits(getMember, typeof(variable), state);
+        }
+        else static if(is(typeof(variable) : int))
+        {
+            // Ensure countUntil happens at compile-time.
+            enum index = [ __states__ ].countUntil(state);
             return variable == index;
         }
         else
@@ -60,12 +74,13 @@ mixin template StateMachine(alias variable, states...)
         variable = __prevState__;
     }
 
-    bool opDispatch(string state)()
-        if(state.length > 2 && state[0 .. 2] == "to" &&
-           [ states ].map!toTitle.countUntil(state[2 .. $]) != -1)
+    bool opDispatch(string op)()
+        if(op.length > 2 && op[0 .. 2] == "to" &&
+          [ __states__ ].map!toTitle.countUntil(op[2 .. $]) != -1)
     {
-        enum index = [ states ].map!toTitle.countUntil(state[2 .. $]);
+        enum index = [ __states__ ].map!toTitle.countUntil(op[2 .. $]);
 
+        // Fire and check any BeforeTransition callbacks.
         foreach(name; __traits(allMembers, typeof(this)))
         {
             alias member = Alias!(__traits(getMember, typeof(this), name));
@@ -78,7 +93,7 @@ mixin template StateMachine(alias variable, states...)
                     {
                         static if(is(attribute == BeforeTransition) ||
                                  (is(typeof(attribute) == BeforeTransition) &&
-                                  attribute.state == states[index]))
+                                  attribute.state == __states__[index]))
                         {
                             static if(is(typeof(member()) : bool))
                             {
@@ -101,7 +116,12 @@ mixin template StateMachine(alias variable, states...)
         __prevState__ = variable;
 
         // Update state variable.
-        static if(is(typeof(variable) : int))
+        static if(is(typeof(variable) == enum))
+        {
+            enum string constant = __states__[index];
+            variable = __traits(getMember, typeof(variable), constant);
+        }
+        else static if(is(typeof(variable) : int))
         {
             variable = index;
         }
@@ -110,6 +130,7 @@ mixin template StateMachine(alias variable, states...)
             variable = state;
         }
 
+        // Fire any AfterTransition callbacks.
         foreach(name; __traits(allMembers, typeof(this)))
         {
             alias member = Alias!(__traits(getMember, typeof(this), name));
@@ -122,7 +143,7 @@ mixin template StateMachine(alias variable, states...)
                     {
                         static if(is(attribute == AfterTransition) ||
                                  (is(typeof(attribute) == AfterTransition) &&
-                                  attribute.state == states[index]))
+                                  attribute.state == __states__[index]))
                         {
                             member();
                         }
