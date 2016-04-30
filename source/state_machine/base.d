@@ -44,6 +44,37 @@ mixin template StateMachine(alias variable, states...)
     }
 
     @property
+    static typeof(variable)[string] opDispatch(string op : variable.stringof ~ "Values")()
+    {
+        typeof(variable)[string] values;
+
+        static if(is(typeof(variable) == enum))
+        {
+            foreach(string state; __states__)
+            {
+                values[state] = __traits(getMember, typeof(variable), state);
+            }
+        }
+        else static if(is(typeof(variable) : int))
+        {
+            foreach(typeof(variable) index, string state; __states__)
+            {
+                values[state] = index;
+            }
+        }
+        else
+        {
+            foreach(string state; __states__)
+            {
+                // The most useful.
+                values[state] = state;
+            }
+        }
+
+        return values;
+    }
+
+    @property
     bool opDispatch(string state)()
         if([ __states__ ].countUntil(state) != -1)
     {

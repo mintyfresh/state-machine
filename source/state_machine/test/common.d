@@ -55,6 +55,7 @@ unittest
     Order o;
 
     assert(o.statusNames == ["pending", "ordered", "paid"]);
+    assert(o.statusValues == ["pending": 0, "ordered": 1, "paid": 2]);
 
     assert(o.status == 0);
     assert(o.pending is true);
@@ -152,6 +153,14 @@ static unittest
 unittest
 {
     User u;
+
+    assert(u.statusNames == ["none", "registered", "confirmed", "banned"]);
+    assert(u.statusValues == [
+        "none":       UserStatus.none,
+        "registered": UserStatus.registered,
+        "confirmed":  UserStatus.confirmed,
+        "banned":     UserStatus.banned
+    ]);
 
     assert(u.status is null);
     assert(u.email is null);
