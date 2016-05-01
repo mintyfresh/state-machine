@@ -86,6 +86,81 @@ unittest
 
 version(unittest)
 {
+    class Product
+    {
+        mixin StateMachine!(status, "inactive", "active", "deleted");
+
+    private:
+        string status = "inactive";
+
+        string name;
+        string description;
+        double price = 0;
+
+        @BeforeTransition("active")
+        bool hasNameAndDescription()
+        {
+            return name != null && description != null;
+        }
+
+        @BeforeTransition
+        bool isNotSoftDeleted()
+        {
+            return !this.deleted;
+        }
+    }
+}
+
+static unittest
+{
+    Product p;
+
+    static assert(is(typeof(p.statusNames()) == string[]));
+
+    static assert(is(typeof(p.inactive()) == bool));
+    static assert(is(typeof(p.active()) == bool));
+    static assert(is(typeof(p.deleted()) == bool));
+
+    static assert(is(typeof(p.toInactive()) == bool));
+    static assert(is(typeof(p.toActive()) == bool));
+    static assert(is(typeof(p.toDeleted()) == bool));
+}
+
+unittest
+{
+    Product p = new Product;
+
+    assert(p.status == "inactive");
+    assert(p.name is null);
+    assert(p.description is null);
+    assert(p.price == 0);
+
+    assert(p.inactive is true);
+    assert(p.active is false);
+    assert(p.deleted is false);
+
+    assert(p.toActive is false);
+    assert(p.inactive is true);
+
+    p.name = "Pizza";
+    p.description = "Cheese";
+    p.price = 15.99;
+    assert(p.toActive is true);
+    assert(p.inactive is false);
+    assert(p.active is true);
+
+    assert(p.toDeleted is true);
+    assert(p.deleted is true);
+
+    assert(p.toActive is false);
+    assert(p.deleted is true);
+
+    assert(p.toInactive is false);
+    assert(p.deleted is true);
+}
+
+version(unittest)
+{
     enum UserStatus : string
     {
         none       = null,

@@ -158,7 +158,7 @@ mixin template StateMachine(alias variable, states...)
         }
         else
         {
-            variable = state;
+            variable = __states__[index];
         }
 
         // Fire any AfterTransition callbacks.
