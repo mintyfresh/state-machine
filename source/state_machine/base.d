@@ -14,6 +14,16 @@ mixin template StateMachine(alias variable, states...)
 
     private
     {
+        static if(is(typeof(variable())))
+        {
+            // For properties, .stringof ends with parentheses.
+            enum __name__ = variable.stringof[0 .. $ - 2];
+        }
+        else
+        {
+            enum __name__ = variable.stringof;
+        }
+
         static if(is(typeof(variable) == enum))
         {
             // States on enum types are derived from their members.
@@ -38,13 +48,13 @@ mixin template StateMachine(alias variable, states...)
     }
 
     @property
-    static string[] opDispatch(string op : variable.stringof ~ "Names")()
+    static string[] opDispatch(string op : __name__ ~ "Names")()
     {
         return [ __states__ ];
     }
 
     @property
-    static typeof(variable)[string] opDispatch(string op : variable.stringof ~ "Values")()
+    static typeof(variable)[string] opDispatch(string op : __name__ ~ "Values")()
     {
         typeof(variable)[string] values;
 
@@ -95,12 +105,12 @@ mixin template StateMachine(alias variable, states...)
         }
     }
 
-    typeof(variable) opDispatch(string op : "prev" ~ variable.stringof.toTitle)()
+    typeof(variable) opDispatch(string op : "prev" ~ __name__)()
     {
         return __prevState__;
     }
 
-    void opDispatch(string op : "revert" ~ variable.stringof.toTitle)()
+    void opDispatch(string op : "revert" ~ __name__)()
     {
         variable = __prevState__;
     }

@@ -276,3 +276,46 @@ unittest
     assert(u.banned is true);
     assert(u.confirmed is false);
 }
+
+version(unittest)
+{
+    struct Message
+    {
+        mixin StateMachine!(status, "unsent", "draft", "sent", "opened");
+
+    private:
+        uint _status;
+
+        string title;
+        string content;
+
+    public:
+        @property
+        uint status() const
+        {
+            return _status;
+        }
+
+        @property
+        uint status(uint status)
+        {
+            return _status = status;
+        }
+    }
+}
+
+unittest
+{
+    Message m;
+
+    assert(m.statusNames == ["unsent", "draft", "sent", "opened"]);
+
+    assert(m.status == 0);
+    assert(m.title is null);
+    assert(m.content is null);
+    assert(m.unsent is true);
+
+    assert(m.toDraft is true);
+    assert(m.draft is true);
+    assert(m.unsent is false);
+}
