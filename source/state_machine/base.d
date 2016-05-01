@@ -128,7 +128,7 @@ mixin template StateMachine(alias variable, states...)
 
             static if(is(typeof(member) == function))
             {
-                static if(arity!member == 0)
+                static if(arity!member <= 1)
                 {
                     foreach(attribute; __traits(getAttributes, member))
                     {
@@ -138,14 +138,31 @@ mixin template StateMachine(alias variable, states...)
                         {
                             static if(is(typeof(member()) : bool))
                             {
-                                if(!member())
+                                static if(arity!member == 1)
+                                {
+                                    // Callback can accept destination state.
+                                    bool result = member(__states__[index]);
+                                }
+                                else
+                                {
+                                    bool result = member();
+                                }
+
+                                if(!result)
                                 {
                                     return false;
                                 }
                             }
                             else
                             {
-                                member();
+                                static if(arity!member == 1)
+                                {
+                                    member(__states__[index]);
+                                }
+                                else
+                                {
+                                    member();
+                                }
                             }
                         }
                     }
@@ -178,7 +195,7 @@ mixin template StateMachine(alias variable, states...)
 
             static if(is(typeof(member) == function))
             {
-                static if(arity!member == 0)
+                static if(arity!member <= 1)
                 {
                     foreach(attribute; __traits(getAttributes, member))
                     {
@@ -186,7 +203,15 @@ mixin template StateMachine(alias variable, states...)
                                  (is(typeof(attribute) == AfterTransition) &&
                                   attribute.state == __states__[index]))
                         {
-                            member();
+                            static if(arity!member == 1)
+                            {
+                                // Callback can accept destination state.
+                                member(__states__[index]);
+                            }
+                            else
+                            {
+                                member();
+                            }
                         }
                     }
                 }
